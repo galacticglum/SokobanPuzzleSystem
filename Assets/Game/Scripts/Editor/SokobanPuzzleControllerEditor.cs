@@ -8,6 +8,7 @@ public class SokobanPuzzleControllerEditor : Editor
 {
     private static GUIContent EditModeButton => EditorGUIUtility.IconContent("EditCollider");
 
+    private SokobanPuzzleController sokobanPuzzleController;
     private SerializedPropertyManager propertyManager;
     private BoxBoundsHandle boxBoundsHandle;
     private bool canEditBounds;
@@ -22,6 +23,8 @@ public class SokobanPuzzleControllerEditor : Editor
 
         EditMode.onEditModeStartDelegate += (editor, mode) => canEditBounds = true;
         EditMode.onEditModeEndDelegate += editor => canEditBounds = false;
+
+        sokobanPuzzleController = (SokobanPuzzleController)target;
     }
 
     public override void OnInspectorGUI()
@@ -32,19 +35,26 @@ public class SokobanPuzzleControllerEditor : Editor
             propertyManager["size"].vector2Value);
 
         GUI.enabled = false;
-        propertyManager["offset"].vector2Value = EditorGUILayout.Vector2Field(new GUIContent("Offset"), propertyManager["offset"].vector2Value);
+        EditorGUILayout.Vector3Field(new GUIContent("Offset"), sokobanPuzzleController.transform.position);
         GUI.enabled = true;
 
         propertyManager["topDownGrid"].boolValue = EditorGUILayout.Toggle(new GUIContent("Is Topdown Grid"),
             propertyManager["topDownGrid"].boolValue);
 
         propertyManager.Target.ApplyModifiedProperties();
+
+        EditorGUILayout.BeginHorizontal();
+        Rect buttonRect = GUILayoutUtility.GetRect(new GUIContent("Generate Level"), GUI.skin.button);
+        if (GUI.Button(buttonRect, "Generate Level"))
+        {
+            ((SokobanPuzzleController)target).InitializeTiles();
+        }
+        EditorGUILayout.EndHorizontal();
     }
 
     private void OnSceneGUI()
     {
-        SokobanPuzzleController controller = (SokobanPuzzleController) target;
-        using (new Handles.DrawingScope(controller.GridViewMatrix))
+        using (new Handles.DrawingScope(sokobanPuzzleController.GridViewMatrix))
         {
             if (canEditBounds)
             {
@@ -58,13 +68,7 @@ public class SokobanPuzzleControllerEditor : Editor
                     Undo.RecordObject((SokobanPuzzleController)target,
                         $"Modify {ObjectNames.NicifyVariableName(target.GetType().Name)}");
 
-                    Vector2 oldSize = propertyManager["size"].vector2Value;
-
                     propertyManager["size"].vector2Value = boxBoundsHandle.size;
-                    if (propertyManager["size"].vector2Value != oldSize)
-                    {
-                        propertyManager["offset"].vector2Value = boxBoundsHandle.center;
-                    }
                 }
             }
             else
@@ -81,52 +85,51 @@ public class SokobanPuzzleControllerEditor : Editor
                 Handles.DrawLine(topRight, bottomRight);
             }
 
-            // Draw grid lines
-            int width = Mathf.FloorToInt(propertyManager["size"].vector2Value.x / 2f);
-            int height = Mathf.FloorToInt(propertyManager["size"].vector2Value.y / 2f);
+            int halfWidth = sokobanPuzzleController.Width / 2;
+            int halfHeight = sokobanPuzzleController.Height / 2;
 
-            for (int x = -width; x < width + 1; x++)
+            for (int x = -halfWidth; x < halfWidth + 1; x++)
             {
                 InitializeGizmoColour(x);
 
-                Vector3 a = new Vector3(x + propertyManager["offset"].vector2Value.x, -height + propertyManager["offset"].vector2Value.y, 0);
-                Vector3 b = new Vector3(x + propertyManager["offset"].vector2Value.x, height + propertyManager["offset"].vector2Value.y, 0);
+                Vector3 a = new Vector3(x, -halfHeight, 0);
+                Vector3 b = new Vector3(x, halfHeight, 0);
 
                 Handles.DrawLine(a, b);
             }
 
             // draw the vertical lines
-            for (int y = -height; y < height + 1; y++)
+            for (int y = -halfHeight; y < halfHeight + 1; y++)
             {
                 InitializeGizmoColour(y);
 
-                Vector3 a = new Vector3(-width + propertyManager["offset"].vector2Value.x, y + propertyManager["offset"].vector2Value.y, 0);
-                Vector3 b = new Vector3(width + propertyManager["offset"].vector2Value.x, y + propertyManager["offset"].vector2Value.y, 0);
+                Vector3 a = new Vector3(-halfWidth, y, 0);
+                Vector3 b = new Vector3(halfWidth, y, 0);
 
                 Handles.DrawLine(a, b);
             }
 
-
-            if (canEditBounds) return;
-
-            // Reset tint
-            Handles.color = Color.white;
-            for (int y = -height; y < height; y++)
+            if (!canEditBounds)
             {
-                for (int x = -width; x < width; x++)
+                // Reset tint
+                Handles.color = Color.white;
+                for (int y = -halfHeight; y < halfHeight; y++)
                 {
-                    Vector3 position = new Vector3(x + propertyManager["offset"].vector2Value.x, y + propertyManager["offset"].vector2Value.y, 0);
-
-                    // Draw tile
-                    Handles.DrawSolidRectangleWithOutline(new Rect(position, new Vector2(1, 1)), new Color(0.933f, 0.95f, 0.25f, 0.1f), Color.green);
-
-                    //// Draw picker inner
-                    //Handles.DrawSolidRectangleWithOutline(new Rect(position + new Vector3(0.375f, 0.375f), new Vector2(0.25f, 0.25f)), new Color(0, 1, 0, 0.2f), new Color(0, 0, 0, 1));
-
-                    if (Handles.Button(position + new Vector3(0.5f, 0.5f), Quaternion.identity, 0.125f, 0.125f,
-                        Handles.DotHandleCap))
+                    for (int x = -halfWidth; x < halfWidth; x++)
                     {
+                        Vector3 position = new Vector3(x, y, 0);
 
+                        // Draw tile
+                        Handles.DrawSolidRectangleWithOutline(new Rect(position, new Vector2(1, 1)), new Color(0.933f, 0.95f, 0.25f, 0.1f), Color.green);
+
+                        //// Draw picker inner
+                        //Handles.DrawSolidRectangleWithOutline(new Rect(position + new Vector3(0.375f, 0.375f), new Vector2(0.25f, 0.25f)), new Color(0, 1, 0, 0.2f), new Color(0, 0, 0, 1));
+
+                        if (Handles.Button(position + new Vector3(0.5f, 0.5f), Quaternion.identity, 0.125f, 0.125f,
+                            Handles.DotHandleCap))
+                        {
+
+                        }
                     }
                 }
             }
