@@ -31,35 +31,9 @@ public class SokobanPuzzleController : MonoBehaviour
     [SerializeField]
     private bool topDownGrid = true;
 
-    private void OnDrawGizmos()
+    private void Reset()
     {
-        Gizmos.matrix = GridViewMatrix;
-
-        int width = Mathf.FloorToInt(size.x / 2f);
-        int height = Mathf.FloorToInt(size.y / 2f);
-
-        // draw the horizontal lines
-        for (int x = -width; x < width + 1; x++)
-        {
-            InitializeGizmoColour(x);
-
-            Vector3 a = new Vector3(x, -height, 0);
-            Vector3 b = new Vector3(x, height, 0);
-
-            Gizmos.DrawLine(a, b);
-        }
-
-        // draw the vertical lines
-        for (int y = -height; y < height + 1; y++)
-        {
-            InitializeGizmoColour(y);
-
-            Vector3 a = new Vector3(-width, y, 0);
-            Vector3 b = new Vector3(width, y, 0);
-
-            Gizmos.DrawLine(a, b);
-        }
+        size = new Vector2(2, 2);
+        offset = Vector2.zero;
     }
-
-    private static void InitializeGizmoColour(int value) => Gizmos.color = value == 0 ? Color.white : Color.green;
 }
